@@ -1,0 +1,896 @@
+{
+    "projectId": "690e55ba0036aa6cf8e9",
+    "projectName": "athkar",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": true,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 0,
+                "sessionsLimit": 10,
+                "passwordHistory": 0,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
+    },
+    "functions": [
+        {
+            "$id": "create_profile",
+            "name": "create_profile",
+            "runtime": "node-16.0",
+            "specification": "s-0.5vcpu-512mb",
+            "execute": [
+                "any"
+            ],
+            "events": [
+                "users.*.create"
+            ],
+            "scopes": [
+                "users.read",
+                "rows.write",
+                "documents.write"
+            ],
+            "schedule": "",
+            "timeout": 15,
+            "enabled": true,
+            "logging": true,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "ignore": [
+                "node_modules",
+                ".npm"
+            ],
+            "path": "functions/create_profile"
+        },
+        {
+            "$id": "message_created",
+            "name": "message_created",
+            "runtime": "node-16.0",
+            "specification": "s-0.5vcpu-512mb",
+            "execute": [
+                "any"
+            ],
+            "events": [
+                "databases.*.tables.messages.create"
+            ],
+            "scopes": [
+                "users.read",
+                "rows.read",
+                "documents.read",
+                "rows.write",
+                "documents.write"
+            ],
+            "schedule": "",
+            "timeout": 15,
+            "enabled": true,
+            "logging": true,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "ignore": [
+                "node_modules",
+                ".npm"
+            ],
+            "path": "functions/message_created"
+        },
+        {
+            "$id": "start_support",
+            "name": "start_support",
+            "runtime": "node-16.0",
+            "specification": "s-0.5vcpu-512mb",
+            "execute": [
+                "any"
+            ],
+            "events": [],
+            "scopes": [
+                "users.read",
+                "rows.read",
+                "documents.read",
+                "rows.write",
+                "documents.write"
+            ],
+            "schedule": "",
+            "timeout": 15,
+            "enabled": true,
+            "logging": true,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "ignore": [
+                "node_modules",
+                ".npm"
+            ],
+            "path": "functions/start_support"
+        },
+        {
+            "$id": "fatwa_quota_chat",
+            "name": "fatwa_quota_chat",
+            "runtime": "node-16.0",
+            "specification": "s-0.5vcpu-512mb",
+            "execute": [
+                "any"
+            ],
+            "events": [],
+            "scopes": [
+                "users.read",
+                "rows.read",
+                "documents.read",
+                "rows.write",
+                "documents.write"
+            ],
+            "schedule": "",
+            "timeout": 15,
+            "enabled": true,
+            "logging": true,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "ignore": [
+                "node_modules",
+                ".npm"
+            ],
+            "path": "functions/fatwa_quota_chat"
+        }
+    ],
+    "tablesDB": [
+        {
+            "$id": "690e5856003a3c9c0060",
+            "name": "athkar",
+            "enabled": true
+        }
+    ],
+    "tables": [
+        {
+            "$id": "profile",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "create(\"team:69a4ac330024781b3e76\")",
+                "read(\"team:69a4ac330024781b3e76\")",
+                "update(\"team:69a4ac330024781b3e76\")",
+                "delete(\"team:69a4ac330024781b3e76\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "profile",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "username",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "email",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "email"
+                },
+                {
+                    "key": "plan_id",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "plan",
+                    "relationType": "manyToOne",
+                    "twoWay": false,
+                    "twoWayKey": "69a4a28800335b07a03f",
+                    "onDelete": "cascade",
+                    "side": "parent"
+                },
+                {
+                    "key": "tokens_remaining",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "plan_expires_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "avatar",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "file_bucket_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "profileUrl",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "plan",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"team:69a4ac330024781b3e76\")",
+                "read(\"team:69a4ac330024781b3e76\")",
+                "update(\"team:69a4ac330024781b3e76\")",
+                "delete(\"team:69a4ac330024781b3e76\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "plan",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "nameAr",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tokens",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "price",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+                    "max": 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                },
+                {
+                    "key": "currency",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "durationDays",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "popular",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "admin_messages",
+            "$permissions": [
+                "create(\"team:69a4ac330024781b3e76\")",
+                "read(\"team:69a4ac330024781b3e76\")",
+                "update(\"team:69a4ac330024781b3e76\")",
+                "delete(\"team:69a4ac330024781b3e76\")",
+                "read(\"any\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "admin_messages",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "body",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 800,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "targetType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "all",
+                        "user"
+                    ]
+                },
+                {
+                    "key": "createdBy",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "ai_usage_logs",
+            "$permissions": [
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "create(\"team:69a4ac330024781b3e76\")",
+                "read(\"team:69a4ac330024781b3e76\")",
+                "update(\"team:69a4ac330024781b3e76\")",
+                "delete(\"team:69a4ac330024781b3e76\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "ai_usage_logs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "feature",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "chat"
+                    ]
+                },
+                {
+                    "key": "promptTokens",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "completionTokens",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "totalTokens",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "model",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "guest_ai_usage",
+            "$permissions": [
+                "create(\"team:69a4ac330024781b3e76\")",
+                "read(\"team:69a4ac330024781b3e76\")",
+                "update(\"team:69a4ac330024781b3e76\")",
+                "delete(\"team:69a4ac330024781b3e76\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "guest_ai_usage",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "guest_key",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 120,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "window_start",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "tokens_used",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": 0,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "requests_count",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": 0,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "last_used_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "announcements",
+            "$permissions": [],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "announcements",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "body",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 800,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "imageUrl",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "url"
+                },
+                {
+                    "key": "active",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "startAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "endAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "createdBy",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "payment_orders",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "create(\"team:69a4ac330024781b3e76\")",
+                "read(\"team:69a4ac330024781b3e76\")",
+                "update(\"team:69a4ac330024781b3e76\")",
+                "delete(\"team:69a4ac330024781b3e76\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "payment_orders",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "planId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "pending",
+                        "under_review",
+                        "accepted",
+                        "rejected"
+                    ]
+                },
+                {
+                    "key": "paymentMethod",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "flouci",
+                        "post",
+                        "card"
+                    ]
+                },
+                {
+                    "key": "proofFileId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "adminNotes",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "reviewedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "reviewedBy",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "threads",
+            "$permissions": [
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "threads",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "threadUserPref",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "thread_user_pref",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "thread",
+                    "onDelete": "setNull",
+                    "side": "child"
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "messages",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")",
+                "create(\"team:69a4ac330024781b3e76\")",
+                "read(\"team:69a4ac330024781b3e76\")",
+                "update(\"team:69a4ac330024781b3e76\")",
+                "delete(\"team:69a4ac330024781b3e76\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "messages",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "content",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 800,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "fileId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bucketId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "thread",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "threads",
+                    "relationType": "manyToOne",
+                    "twoWay": false,
+                    "twoWayKey": "69a525d600201ee0e1f9",
+                    "onDelete": "cascade",
+                    "side": "parent"
+                },
+                {
+                    "key": "sender",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "profile",
+                    "relationType": "manyToOne",
+                    "twoWay": false,
+                    "twoWayKey": "69a525eb002bcee944aa",
+                    "onDelete": "cascade",
+                    "side": "parent"
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "thread_user_pref",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "690e5856003a3c9c0060",
+            "name": "thread_user_pref",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "title",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "label",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "unread_count",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "last_message",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "profile",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "profile",
+                    "relationType": "manyToOne",
+                    "twoWay": false,
+                    "twoWayKey": "69a567fc000583875b5f",
+                    "onDelete": "cascade",
+                    "side": "parent"
+                },
+                {
+                    "key": "thread",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "threads",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "threadUserPref",
+                    "onDelete": "setNull",
+                    "side": "parent"
+                }
+            ],
+            "indexes": []
+        }
+    ],
+    "buckets": [
+        {
+            "$id": "690e58a600018bc78cdb",
+            "$permissions": [],
+            "fileSecurity": false,
+            "name": "avatar",
+            "enabled": true,
+            "maximumFileSize": 30000000,
+            "allowedFileExtensions": [],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
+        }
+    ],
+    "teams": [],
+    "topics": []
+}
