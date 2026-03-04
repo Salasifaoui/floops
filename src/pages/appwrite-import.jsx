@@ -98,8 +98,8 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
     setIsFetching(true);
 
     try {
-      // const connector = createAppwriteConnector(form);
-      const schema = await fetchProjectSchema(connectionInfo);
+      const client = JSON.parse(localStorage.getItem("appwrite-client"));
+      const schema = await fetchProjectSchema(client.config);
       const mappedFlowDocument = mapAppwriteSchemaToFlowDocument(schema);
 
       if (!validateFlowDocumentShape(mappedFlowDocument)) {

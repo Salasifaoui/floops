@@ -1,12 +1,10 @@
-import { Account, Client, TablesDB } from "appwrite";
+import { Account, Client, TablesDB, Databases } from "appwrite";
 
 export const APPWRITE_AUTH_MODES = {
   JWT: "jwt",
   EMAIL_PASSWORD: "emailPassword",
   ANONYMOUS: "anonymous",
 };
-
-const APPWRITE_API_PREFIX = "/v1";
 
 function normalizeEndpoint(endpoint) {
   return String(endpoint ?? "")
@@ -26,7 +24,7 @@ function encode(value) {
 
 function createProjectHeaders(connector) {
   const headers = {
-    "X-Appwrite-Project": connector.projectId,
+    "X-Appwrite-Project": connector.project,
   };
 
   if (connector.authMode === APPWRITE_AUTH_MODES.JWT && connector.jwt) {
@@ -72,7 +70,7 @@ async function appwriteRequest(connector, method, path, body = null) {
   }
 
   const response = await fetch(
-    `${connector.endpoint}${APPWRITE_API_PREFIX}${toApiPath(path)}`,
+    `${connector.endpoint}${toApiPath(path)}`,
     init,
   );
   if (!response.ok) {
@@ -211,6 +209,7 @@ export async function testConnection(connector) {
     await authenticateConnection(connector);
     const account = new Account(connector.client);
   const user = await account.get();
+  localStorage.setItem("appwrite-client", JSON.stringify(connector.client));
   localStorage.setItem("appwrite-session", JSON.stringify(user));
 
     const databases = new TablesDB(connector.client);
@@ -230,7 +229,11 @@ export async function testConnection(connector) {
 
 export async function fetchProjectSchema(connector) {
   try {
-    const databases = await listDatabases(connector);
+    const databases = new Databases(connector);
+    const list = await databases.getTransactions();
+    console.log("-list---------");
+    console.log(list);
+    console.log("-list:---------");
 
     const detailedDatabases = await Promise.all(
       databases.map(async (database) => {
