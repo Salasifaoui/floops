@@ -14,11 +14,11 @@ import "../App.css";
 function defaultFormState() {
   return {
     endpoint: "https://zixdev.cloud/v1",
-    projectId: "68baa694000afcc9f5bb",
+    projectId: "",
     authMode: APPWRITE_AUTH_MODES.JWT,
-    jwt: "standard_8ac63b5200db6db23fef3e6ee53d1a88ff15027a7cdce0f32c956877dd0d75d486439a77e569c0d9927fe50e7275b355faae244cd19b9b4506e79e9829d609687f189fbf85760355a83e1d8b49426bc1014020c3bf700919cc5c7bd175bd1eea054c56332ca621da1468c3719ed4f647fcac266995bf4a0841930f76c13a93b3",
-    email: "salahifaoui2022@gmail.com",
-    password: "Ss123456789",
+    jwt: "",
+    email: "",
+    password: "",
   };
 }
 
@@ -150,8 +150,7 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
                 <span>Project ID</span>
                 <input
                   type="text"
-                  // value={form.projectId}
-                  defaultValue="68baa694000afcc9f5bb"
+                  value={form.projectId}
                   onChange={(event) => onFormChange("projectId", event.target.value)}
                   placeholder="project_id"
                 />
@@ -185,8 +184,7 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
                     <span>Email</span>
                     <input
                       type="email"
-                      // value={form.email}
-                      defaultValue="salahifaoui2022@gmail.com"
+                      value={form.email}
                       onChange={(event) => onFormChange("email", event.target.value)}
                       placeholder="name@example.com"
                     />
@@ -195,8 +193,7 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
                     <span>Password</span>
                     <input
                       type="password"
-                      // value={form.password}
-                      defaultValue="Ss123456789"
+                      value={form.password}
                       onChange={(event) => onFormChange("password", event.target.value)}
                       placeholder="********"
                     />

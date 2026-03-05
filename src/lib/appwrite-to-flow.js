@@ -1,3 +1,7 @@
+import { buildEdges, buildNodes, layoutNodesWithDagre } from "./graph-builder";
+import { parseFlowJson } from "./flow-parser";
+import { serializeFlowDocument } from "./flow-serializer";
+
 function normalizeRelationType(rawType) {
   const value = String(rawType ?? "").toLowerCase();
   if (value === "manytoone" || value === "many_to_one") return "manyToOne";
@@ -26,6 +30,8 @@ function normalizeColumn(rawColumn, index) {
   };
 
   if (relatedTable) column.relatedTable = String(relatedTable);
+  if (rawColumn?.relation) column.relation = String(rawColumn.relation);
+  if (rawColumn?.relationId) column.relationId = String(rawColumn.relationId);
   if (rawColumn?.relationType) column.relationType = String(normalizeRelationType(rawColumn.relationType));
   if (rawColumn?.twoWay !== undefined) column.twoWay = Boolean(rawColumn.twoWay);
   if (rawColumn?.twoWayKey) column.twoWayKey = String(rawColumn.twoWayKey);
@@ -112,15 +118,23 @@ export function mapAppwriteSchemaToFlowDocument(schema) {
   }
 
   const relations = buildRelations(databases);
-
-  return {
+  const draftFlowDocument = {
     projectId: schema?.projectId ? String(schema.projectId) : null,
     projectName: schema?.projectName ? String(schema.projectName) : null,
     importedAt: new Date().toISOString(),
     source: "appwrite",
     tables,
-    relations,
   };
+  if (relations.length > 0) {
+    draftFlowDocument.relations = relations;
+  }
+
+  const parsed = parseFlowJson(draftFlowDocument);
+  const nodes = buildNodes(parsed.tables);
+  const edges = buildEdges(parsed.relations);
+  const laidOutNodes = layoutNodesWithDagre(nodes, edges);
+
+  return serializeFlowDocument(draftFlowDocument, laidOutNodes, parsed.relations);
 }
 
 export function summarizeFlowDocument(flowDocument) {

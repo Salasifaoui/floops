@@ -1,5 +1,6 @@
 import { Account, Client, TablesDB, Databases } from "appwrite";
 
+
 export const APPWRITE_AUTH_MODES = {
   JWT: "jwt",
   EMAIL_PASSWORD: "emailPassword",
@@ -27,9 +28,11 @@ function createProjectHeaders(connector) {
     "X-Appwrite-Project": connector.project,
   };
 
-  if (connector.authMode === APPWRITE_AUTH_MODES.JWT && connector.jwt) {
-    headers["X-Appwrite-JWT"] = connector.jwt;
+  if (connector.jwt) {
+    headers["X-Appwrite-Key"] = `${connector.jwt}`;
   }
+  headers["Content-Type"] = "application/json";
+  headers["X-Appwrite-Response-Format"] = '1.0.0';
 
   return headers;
 }
@@ -61,7 +64,6 @@ async function appwriteRequest(connector, method, path, body = null) {
   const init = {
     method,
     headers,
-    credentials: "include",
   };
 
   if (body !== null) {
@@ -73,6 +75,7 @@ async function appwriteRequest(connector, method, path, body = null) {
     `${connector.endpoint}${toApiPath(path)}`,
     init,
   );
+
   if (!response.ok) {
     const message = await parseErrorResponse(response);
     throw new Error(message);
@@ -97,9 +100,6 @@ async function firstSuccessfulList(connector, endpoints, keys) {
 
 async function listDatabases(connector) {
   const payload = await appwriteRequest(connector, "GET", "/databases");
-  console.log("-payload---------");
-  console.log(payload);
-  console.log("-payload:---------");
   return extractList(payload, ["databases"]);
 }
 
@@ -207,10 +207,24 @@ export async function authenticateConnection(connector) {
 export async function testConnection(connector) {
   try {
     await authenticateConnection(connector);
+    if (connector.authMode === APPWRITE_AUTH_MODES.JWT && connector.jwt) {
+      connector.client.setJWT(connector.jwt);
+      localStorage.setItem("appwrite-client", JSON.stringify(connector.client));
+      localStorage.setItem("appwrite-session", JSON.stringify(connector.jwt));
+      return {
+        ok: true,
+        mode: connector.authMode,
+        jwt: connector.jwt,
+        accountName: null,
+        accountId: null,
+        databaseCount: 0,
+        hasActiveSession: true,
+      };
+    }
     const account = new Account(connector.client);
-  const user = await account.get();
-  localStorage.setItem("appwrite-client", JSON.stringify(connector.client));
-  localStorage.setItem("appwrite-session", JSON.stringify(user));
+    const user = await account.get();
+    localStorage.setItem("appwrite-client", JSON.stringify(connector.client));
+    localStorage.setItem("appwrite-session", JSON.stringify(user));
 
     const databases = new TablesDB(connector.client);
     const list = await databases.listTransactions();
@@ -229,11 +243,7 @@ export async function testConnection(connector) {
 
 export async function fetchProjectSchema(connector) {
   try {
-    const databases = new Databases(connector);
-    const list = await databases.getTransactions();
-    console.log("-list---------");
-    console.log(list);
-    console.log("-list:---------");
+    const databases = await listDatabases(connector);
 
     const detailedDatabases = await Promise.all(
       databases.map(async (database) => {
