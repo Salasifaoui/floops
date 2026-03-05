@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   APPWRITE_AUTH_MODES,
   createAppwriteConnector,
@@ -10,6 +10,8 @@ import {
   summarizeFlowDocument,
 } from "../lib/appwrite-to-flow";
 import "../App.css";
+
+const APPWRITE_PROJECTS_STORAGE_KEY = "sufax-flow:appwrite-project-configs";
 
 function defaultFormState() {
   return {
@@ -23,99 +25,251 @@ function defaultFormState() {
 }
 
 function validateFlowDocumentShape(candidate) {
-  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return false;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
+    return false;
   if (!Array.isArray(candidate.tables)) return false;
-  if ("relations" in candidate && !Array.isArray(candidate.relations)) return false;
+  if ("relations" in candidate && !Array.isArray(candidate.relations))
+    return false;
   return true;
 }
 
+function createId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function createProjectId() {
+  return createId("cfg");
+}
+
+function createDraftId() {
+  return createId("draft");
+}
+
+function loadSavedProjects() {
+  try {
+    const raw = window.localStorage.getItem(APPWRITE_PROJECTS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        typeof item.id === "string" &&
+        typeof item.projectId === "string",
+    );
+  } catch {
+    return [];
+  }
+}
+
+function createDefaultRuntime() {
+  return {
+    connectionInfo: null,
+    rawSchema: null,
+    flowDocument: null,
+    isTesting: false,
+    isFetching: false,
+    error: "",
+    success: "",
+  };
+}
+
 export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
-  const [form, setForm] = useState(defaultFormState);
-  const [isTesting, setIsTesting] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [connectionInfo, setConnectionInfo] = useState(null);
-  const [rawSchema, setRawSchema] = useState(null);
-  const [flowDocument, setFlowDocument] = useState(null);
-  const [hasActiveSession, setHasActiveSession] = useState(false);
+  const [projects, setProjects] = useState(loadSavedProjects);
+  const [draftSections, setDraftSections] = useState([]);
+  const [runtimeByProjectId, setRuntimeByProjectId] = useState({});
 
   useEffect(() => {
-    const session = localStorage.getItem("appwrite-session");
-    if (session) {
-      const user = JSON.parse(session);
-      setHasActiveSession(true);
-      setConnectionInfo({
-        accountName: user.name,
-        accountId: user.$id,
-        databaseCount: 0,
-        hasActiveSession: true,
-      });
-    }
-  }, []);
-  useEffect(() => {
-    setHasActiveSession(connectionInfo?.hasActiveSession);
-  }, [connectionInfo]);
+    window.localStorage.setItem(
+      APPWRITE_PROJECTS_STORAGE_KEY,
+      JSON.stringify(projects),
+    );
+  }, [projects]);
 
-  const summary = useMemo(
-    () => (flowDocument ? summarizeFlowDocument(flowDocument) : null),
-    [flowDocument],
-  );
+  const getProjectRuntime = (projectId) =>
+    runtimeByProjectId[projectId] ?? createDefaultRuntime();
 
-  const canFetch = hasActiveSession && !isTesting && !isFetching;
-  const canOpenWorkflow = Boolean(flowDocument) && !isTesting && !isFetching;
-
-  const onFormChange = (key, value) => {
-    setForm((snapshot) => ({ ...snapshot, [key]: value }));
+  const updateProjectRuntime = (projectId, updater) => {
+    setRuntimeByProjectId((snapshot) => {
+      const current = snapshot[projectId] ?? createDefaultRuntime();
+      const next = typeof updater === "function" ? updater(current) : updater;
+      return {
+        ...snapshot,
+        [projectId]: next,
+      };
+    });
   };
 
-  const onTestConnection = async () => {
-    setError("");
-    setSuccess("");
-    setIsTesting(true);
-    setRawSchema(null);
-    setFlowDocument(null);
+  const onDraftChange = (draftId, key, value) => {
+    setDraftSections((snapshot) =>
+      snapshot.map((draft) =>
+        draft.id === draftId
+          ? {
+              ...draft,
+              form: {
+                ...draft.form,
+                [key]: value,
+              },
+            }
+          : draft,
+      ),
+    );
+  };
+
+  const onStartAddingProject = () => {
+    setDraftSections((snapshot) => [
+      {
+        id: createDraftId(),
+        form: defaultFormState(),
+        error: "",
+        isTesting: false,
+      },
+      ...snapshot,
+    ]);
+  };
+
+  const onConnectDraft = async (draftId) => {
+    const draft = draftSections.find((item) => item.id === draftId);
+    if (!draft) return;
+
+    setDraftSections((snapshot) =>
+      snapshot.map((item) =>
+        item.id === draftId
+          ? {
+              ...item,
+              isTesting: true,
+              error: "",
+            }
+          : item,
+      ),
+    );
 
     try {
-      const connector = createAppwriteConnector(form);
-      const result = await testConnection(connector);
-      setConnectionInfo(result);
-      setSuccess(
-        `Active session detected${result.accountName ? ` for ${result.accountName}` : ""}. ` +
-          `${result.databaseCount} database(s) accessible. You can fetch JSON now.`,
+      const connector = createAppwriteConnector(draft.form);
+      const connectionResult = await testConnection(connector);
+
+      const nextProject = {
+        id: createProjectId(),
+        endpoint: connector.endpoint,
+        projectId: connector.projectId,
+        authMode: connector.authMode,
+        jwt: connector.jwt,
+        email: connector.email,
+        password: connector.password,
+      };
+
+      setProjects((snapshot) => [nextProject, ...snapshot]);
+      setDraftSections((snapshot) =>
+        snapshot.filter((item) => item.id !== draftId),
       );
-    } catch (testError) {
-      setConnectionInfo(null);
-      setError(testError instanceof Error ? testError.message : "Connection test failed.");
-    } finally {
-      setIsTesting(false);
+      updateProjectRuntime(nextProject.id, {
+        ...createDefaultRuntime(),
+        connectionInfo: {
+          ...connectionResult,
+          projectId: nextProject.id,
+        },
+        success: `Project ${nextProject.projectId} connected successfully.`,
+      });
+    } catch (connectError) {
+      setDraftSections((snapshot) =>
+        snapshot.map((item) =>
+          item.id === draftId
+            ? {
+                ...item,
+                error:
+                  connectError instanceof Error
+                    ? connectError.message
+                    : "Connection test failed.",
+                isTesting: false,
+              }
+            : item,
+        ),
+      );
     }
   };
 
-  const onFetchJson = async () => {
-    setError("");
-    setSuccess("");
-    setIsFetching(true);
+  const onTestConnection = async (project) => {
+    updateProjectRuntime(project.id, (runtime) => ({
+      ...runtime,
+      isTesting: true,
+      error: "",
+      success: "",
+      rawSchema: null,
+      flowDocument: null,
+    }));
 
     try {
-      const client = JSON.parse(localStorage.getItem("appwrite-client"));
-      const schema = await fetchProjectSchema(client.config);
+      const connector = createAppwriteConnector(project);
+      const result = await testConnection(connector);
+      updateProjectRuntime(project.id, (runtime) => ({
+        ...runtime,
+        isTesting: false,
+        connectionInfo: {
+          ...result,
+          projectId: project.id,
+        },
+        success:
+          `Active session detected${result.accountName ? ` for ${result.accountName}` : ""}. ` +
+          `${result.databaseCount} database(s) accessible. You can fetch JSON now.`,
+      }));
+    } catch (testError) {
+      updateProjectRuntime(project.id, (runtime) => ({
+        ...runtime,
+        isTesting: false,
+        connectionInfo: null,
+        error:
+          testError instanceof Error
+            ? testError.message
+            : "Connection test failed.",
+      }));
+    }
+  };
+
+  const onFetchJson = async (project) => {
+    updateProjectRuntime(project.id, (runtime) => ({
+      ...runtime,
+      isFetching: true,
+      error: "",
+      success: "",
+    }));
+
+    try {
+      const connector = createAppwriteConnector(project);
+      const schema = await fetchProjectSchema(connector);
       const mappedFlowDocument = mapAppwriteSchemaToFlowDocument(schema);
 
       if (!validateFlowDocumentShape(mappedFlowDocument)) {
         throw new Error("Imported data could not be converted to flow JSON.");
       }
 
-      setRawSchema(schema);
-      setFlowDocument(mappedFlowDocument);
-      setSuccess("Schema fetched and converted successfully. You can now open it in Workflow.");
+      updateProjectRuntime(project.id, (runtime) => ({
+        ...runtime,
+        isFetching: false,
+        rawSchema: schema,
+        flowDocument: mappedFlowDocument,
+        success:
+          "Schema fetched and converted successfully. You can now open it in Workflow.",
+      }));
     } catch (fetchError) {
-      setRawSchema(null);
-      setFlowDocument(null);
-      setError(fetchError instanceof Error ? fetchError.message : "Schema fetch failed.");
-    } finally {
-      setIsFetching(false);
+      updateProjectRuntime(project.id, (runtime) => ({
+        ...runtime,
+        isFetching: false,
+        rawSchema: null,
+        flowDocument: null,
+        error:
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Schema fetch failed.",
+      }));
     }
+  };
+
+  const onCleanProjectData = (projectId) => {
+    updateProjectRuntime(projectId, {
+      ...createDefaultRuntime(),
+      success: "Project data cleared.",
+    });
   };
 
   return (
@@ -124,176 +278,274 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
         <div>
           <p className="import-header__eyebrow">Appwrite Import</p>
           <h1>Connect and Import Project Schema</h1>
-          <p>Authenticate, fetch JSON from Appwrite, then open it directly inside workflow.</p>
+          <p>
+            Authenticate, fetch JSON from Appwrite, then open it directly inside
+            workflow.
+          </p>
         </div>
-        <button type="button" className="service-view__back-btn" onClick={onBack}>
+        <button
+          type="button"
+          className="service-view__back-btn"
+          onClick={onBack}
+        >
           Back to Services
         </button>
       </header>
 
-      <section className="import-grid">
-        <article className="import-card">
-          <h2>Connection</h2>
-          {!hasActiveSession ? (
-            <>
-              <label className="import-field">
-                <span>Endpoint</span>
-                <input
-                  type="text"
-                  // value={form.endpoint}
-                  defaultValue="https://zixdev.cloud/v1"
-                  onChange={(event) => onFormChange("endpoint", event.target.value)}
-                  placeholder="https://cloud.appwrite.io"
-                />
-              </label>
-              <label className="import-field">
-                <span>Project ID</span>
-                <input
-                  type="text"
-                  value={form.projectId}
-                  onChange={(event) => onFormChange("projectId", event.target.value)}
-                  placeholder="project_id"
-                />
-              </label>
-              <label className="import-field">
-                <span>Auth mode</span>
-                <select
-                  value={form.authMode}
-                  onChange={(event) => onFormChange("authMode", event.target.value)}
-                >
-                  <option value={APPWRITE_AUTH_MODES.JWT}>JWT</option>
-                  <option value={APPWRITE_AUTH_MODES.EMAIL_PASSWORD}>Email + Password</option>
-                  <option value={APPWRITE_AUTH_MODES.ANONYMOUS}>Anonymous Session</option>
-                </select>
-              </label>
+      <section className="import-sections">
+        {draftSections.map((draftSection) => (
+          <article
+            className="import-card import-project-section"
+            key={draftSection.id}
+          >
+            <h2>New Project</h2>
+            <label className="import-field">
+              <span>Endpoint</span>
+              <input
+                type="text"
+                value={draftSection.form.endpoint}
+                onChange={(event) =>
+                  onDraftChange(draftSection.id, "endpoint", event.target.value)
+                }
+                placeholder="https://cloud.appwrite.io"
+              />
+            </label>
+            <label className="import-field">
+              <span>Project ID</span>
+              <input
+                type="text"
+                value={draftSection.form.projectId}
+                onChange={(event) =>
+                  onDraftChange(
+                    draftSection.id,
+                    "projectId",
+                    event.target.value,
+                  )
+                }
+                placeholder="project_id"
+              />
+            </label>
+            <label className="import-field">
+              <span>Auth mode</span>
+              <select
+                value={draftSection.form.authMode}
+                onChange={(event) =>
+                  onDraftChange(draftSection.id, "authMode", event.target.value)
+                }
+              >
+                <option value={APPWRITE_AUTH_MODES.JWT}>JWT</option>
+                <option value={APPWRITE_AUTH_MODES.EMAIL_PASSWORD}>
+                  Email + Password
+                </option>
+                <option value={APPWRITE_AUTH_MODES.ANONYMOUS}>
+                  Anonymous Session
+                </option>
+              </select>
+            </label>
 
-              {form.authMode === APPWRITE_AUTH_MODES.JWT ? (
+            {draftSection.form.authMode === APPWRITE_AUTH_MODES.JWT ? (
+              <label className="import-field">
+                <span>JWT</span>
+                <textarea
+                  value={draftSection.form.jwt}
+                  onChange={(event) =>
+                    onDraftChange(draftSection.id, "jwt", event.target.value)
+                  }
+                  placeholder="Paste Appwrite JWT token"
+                />
+              </label>
+            ) : null}
+
+            {draftSection.form.authMode ===
+            APPWRITE_AUTH_MODES.EMAIL_PASSWORD ? (
+              <>
                 <label className="import-field">
-                  <span>JWT</span>
-                  <textarea
-                    value={form.jwt}
-                    onChange={(event) => onFormChange("jwt", event.target.value)}
-                    placeholder="Paste Appwrite JWT token"
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={draftSection.form.email}
+                    onChange={(event) =>
+                      onDraftChange(
+                        draftSection.id,
+                        "email",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="name@example.com"
                   />
                 </label>
-              ) : null}
+                <label className="import-field">
+                  <span>Password</span>
+                  <input
+                    type="password"
+                    value={draftSection.form.password}
+                    onChange={(event) =>
+                      onDraftChange(
+                        draftSection.id,
+                        "password",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="********"
+                  />
+                </label>
+              </>
+            ) : null}
 
-              {form.authMode === APPWRITE_AUTH_MODES.EMAIL_PASSWORD ? (
-                <>
-                  <label className="import-field">
-                    <span>Email</span>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(event) => onFormChange("email", event.target.value)}
-                      placeholder="name@example.com"
-                    />
-                  </label>
-                  <label className="import-field">
-                    <span>Password</span>
-                    <input
-                      type="password"
-                      value={form.password}
-                      onChange={(event) => onFormChange("password", event.target.value)}
-                      placeholder="********"
-                    />
-                  </label>
-                </>
-              ) : null}
+            <div className="import-actions">
+              <button
+                type="button"
+                onClick={() => onConnectDraft(draftSection.id)}
+                disabled={draftSection.isTesting}
+              >
+                {draftSection.isTesting ? "Connecting..." : "Connect project"}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setDraftSections((snapshot) =>
+                    snapshot.filter((item) => item.id !== draftSection.id),
+                  )
+                }
+                disabled={draftSection.isTesting}
+              >
+                Cancel
+              </button>
+            </div>
+            {draftSection.error ? (
+              <div className="import-message import-message--error">
+                {draftSection.error}
+              </div>
+            ) : null}
+          </article>
+        ))}
+
+        {projects.map((project) => {
+          const runtime = getProjectRuntime(project.id);
+          console.log("-runtime---------");
+          console.log(runtime);
+          console.log("-runtime:---------");
+          const hasActiveSession = Boolean(
+            runtime.connectionInfo?.hasActiveSession,
+          );
+          const canFetch =
+            hasActiveSession && !runtime.isTesting && !runtime.isFetching;
+          const canOpenWorkflow =
+            Boolean(runtime.flowDocument) &&
+            !runtime.isTesting &&
+            !runtime.isFetching;
+          const summary = runtime.flowDocument
+            ? summarizeFlowDocument(runtime.flowDocument)
+            : null;
+
+          return (
+            <article
+              className="import-card import-project-section"
+              key={project.id}
+            >
+              <h2>{project.projectId}</h2>
+              <p className="import-placeholder">Endpoint: {project.endpoint}</p>
 
               <div className="import-actions">
-                <button type="button" onClick={onTestConnection} disabled={isTesting || isFetching}>
-                  {isTesting ? "Testing..." : "Test Connection"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="import-message import-message--success">
-                Connected
-                Session is active.
-              </div>
-              <div className="import-message import-message--success">
-                Welcome to Appwrite Import {connectionInfo?.accountName}! You have {connectionInfo?.databaseCount} databases accessible.
-                
-              </div>
-              <div className="import-actions">
-                <button type="button" onClick={onFetchJson} disabled={!canFetch}>
-                  {isFetching ? "Fetching..." : "Fetch JSON"}
+                <button
+                  type="button"
+                  onClick={() => onTestConnection(project)}
+                  disabled={runtime.isTesting || runtime.isFetching}
+                >
+                  {runtime.isTesting ? "Testing..." : "Test Connection"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setConnectionInfo(null);
-                    setRawSchema(null);
-                    setFlowDocument(null);
-                    setSuccess("");
-                    setError("");
-                    setHasActiveSession(false);
-                    localStorage.removeItem("appwrite-session");
-                  }}
-                  disabled={isTesting || isFetching}
+                  onClick={() => onFetchJson(project)}
+                  disabled={!canFetch}
                 >
-                  Change connection
+                  {runtime.isFetching ? "Fetching..." : "Fetch JSON"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCleanProjectData(project.id)}
+                  disabled={runtime.isTesting || runtime.isFetching}
+                >
+                  Clean data
                 </button>
               </div>
-            </>
-          )}
 
-          {error ? <div className="import-message import-message--error">{error}</div> : null}
-          {!error && success ? (
-            <div className="import-message import-message--success">{success}</div>
-          ) : null}
-        </article>
+              {runtime.error ? (
+                <div className="import-message import-message--error">
+                  {runtime.error}
+                </div>
+              ) : null}
+              {!runtime.error && runtime.success ? (
+                <div className="import-message import-message--success">
+                  {runtime.success}
+                </div>
+              ) : null}
 
-        <article className="import-card">
-          <h2>Import Preview</h2>
-          {summary ? (
-            <div className="import-summary">
-              <div>
-                <span>Databases</span>
-                <strong>{summary.databases}</strong>
+              <div className="import-card import-card--inner">
+                <h2>Import Preview</h2>
+                {summary ? (
+                  <div className="import-summary">
+                    <div>
+                      <span>Databases</span>
+                      <strong>{summary.databases}</strong>
+                    </div>
+                    <div>
+                      <span>Tables</span>
+                      <strong>{summary.tableCount}</strong>
+                    </div>
+                    <div>
+                      <span>Relations</span>
+                      <strong>{summary.relationCount}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="import-placeholder">
+                    No imported data yet. Start by testing and fetching this
+                    project.
+                  </p>
+                )}
+
+                <div className="import-json-preview">
+                  <pre>
+                    {runtime.rawSchema
+                      ? JSON.stringify(
+                          {
+                            projectId: runtime.rawSchema.projectId,
+                            fetchedAt: runtime.rawSchema.fetchedAt,
+                            stats: runtime.rawSchema.stats,
+                          },
+                          null,
+                          2,
+                        )
+                      : "{ }"}
+                  </pre>
+                </div>
+
+                <button
+                  type="button"
+                  className="import-open-workflow-btn"
+                  disabled={!canOpenWorkflow}
+                  onClick={() =>
+                    onOpenWorkflow({
+                      flowDocument: runtime.flowDocument,
+                      schema: runtime.rawSchema,
+                    })
+                  }
+                >
+                  Open in Workflow
+                </button>
               </div>
-              <div>
-                <span>Tables</span>
-                <strong>{summary.tableCount}</strong>
-              </div>
-              <div>
-                <span>Relations</span>
-                <strong>{summary.relationCount}</strong>
-              </div>
-            </div>
-          ) : (
-            <p className="import-placeholder">
-              No imported data yet. Start by validating an active account session, then fetch JSON.
-            </p>
-          )}
+            </article>
+          );
+        })}
 
-          <div className="import-json-preview">
-            <pre>
-              {rawSchema
-                ? JSON.stringify(
-                  {
-                    projectId: rawSchema.projectId,
-                    fetchedAt: rawSchema.fetchedAt,
-                    stats: rawSchema.stats,
-                  },
-                  null,
-                  2,
-                )
-                : "{ }"}
-            </pre>
-          </div>
-
-          <button
-            type="button"
-            className="import-open-workflow-btn"
-            disabled={!canOpenWorkflow}
-            onClick={() => onOpenWorkflow(flowDocument)}
-          >
-            Open in Workflow
-          </button>
-        </article>
+        <button
+          type="button"
+          className="import-project-add-btn import-project-add-btn--footer"
+          onClick={onStartAddingProject}
+        >
+          +
+        </button>
       </section>
     </main>
   );

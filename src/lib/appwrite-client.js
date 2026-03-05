@@ -24,8 +24,13 @@ function encode(value) {
 }
 
 function createProjectHeaders(connector) {
+  const projectHeaderValue = connector.projectId ?? connector.project;
+  if (!projectHeaderValue) {
+    throw new Error("Project ID is required for Appwrite headers.");
+  }
+
   const headers = {
-    "X-Appwrite-Project": connector.project,
+    "X-Appwrite-Project": projectHeaderValue,
   };
 
   if (connector.jwt) {

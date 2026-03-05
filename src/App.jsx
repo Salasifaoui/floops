@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppwriteImportPage from "./pages/appwrite-import";
 import WorkflowPage from "./pages/workflow";
+import flowJson from "./json/flow.json";
 import "./App.css";
 
-const FLOW_STORAGE_KEY = "sufax-flow:flow-document";
+const WORKSPACE_STORAGE_KEY = "sufax-flow:workspace:v1";
+const LEGACY_FLOW_STORAGE_KEY = "sufax-flow:flow-document";
 
 const SERVICES = [
   {
@@ -27,12 +29,207 @@ const SERVICES = [
 ];
 
 export default function App() {
+  function createId(prefix) {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function createBlankFlowDocument() {
+    return {
+      source: "manual",
+      importedAt: new Date().toISOString(),
+      tables: [],
+      relations: [],
+    };
+  }
+
+  function createTab({ id = createId("tab"), title, sourceMode, flowDocument, sourceProjectId = null }) {
+    return {
+      id,
+      title,
+      sourceMode,
+      sourceProjectId,
+      flowDocument,
+      jsonEditorVisible: false,
+    };
+  }
+
+  function createDefaultWorkspace() {
+    const defaultTab = createTab({
+      title: "Default",
+      sourceMode: "file",
+      flowDocument: flowJson,
+    });
+
+    return {
+      tabs: [defaultTab],
+      activeTabId: defaultTab.id,
+      importedProjects: [],
+    };
+  }
+
+  function normalizeWorkspace(candidate) {
+    if (!candidate || typeof candidate !== "object") return null;
+    const tabs = Array.isArray(candidate.tabs) ? candidate.tabs : [];
+    const importedProjects = Array.isArray(candidate.importedProjects) ? candidate.importedProjects : [];
+    if (tabs.length === 0) return null;
+
+    const normalizedTabs = tabs
+      .filter((tab) => tab && typeof tab === "object" && Array.isArray(tab.flowDocument?.tables))
+      .map((tab) => ({
+        id: String(tab.id ?? createId("tab")),
+        title: String(tab.title ?? "Untitled"),
+        sourceMode: String(tab.sourceMode ?? "manual"),
+        sourceProjectId: tab.sourceProjectId ? String(tab.sourceProjectId) : null,
+        flowDocument: tab.flowDocument,
+        jsonEditorVisible: Boolean(tab.jsonEditorVisible),
+      }));
+
+    if (normalizedTabs.length === 0) return null;
+
+    const activeTabId = normalizedTabs.some((tab) => tab.id === candidate.activeTabId)
+      ? String(candidate.activeTabId)
+      : normalizedTabs[0].id;
+
+    const normalizedProjects = importedProjects
+      .filter((project) => project && typeof project === "object" && Array.isArray(project.flowDocument?.tables))
+      .map((project) => ({
+        id: String(project.id ?? createId("project")),
+        title: String(project.title ?? project.projectId ?? "Imported Project"),
+        projectId: String(project.projectId ?? "unknown"),
+        endpoint: project.endpoint ? String(project.endpoint) : null,
+        flowDocument: project.flowDocument,
+        importedAt: String(project.importedAt ?? new Date().toISOString()),
+      }));
+
+    return {
+      tabs: normalizedTabs,
+      activeTabId,
+      importedProjects: normalizedProjects,
+    };
+  }
+
   const [activeView, setActiveView] = useState("home");
+  const [workspace, setWorkspace] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+      if (raw) {
+        const parsed = normalizeWorkspace(JSON.parse(raw));
+        if (parsed) return parsed;
+      }
+    } catch {
+      // Fallback to default workspace.
+    }
+
+    try {
+      const legacyRaw = window.localStorage.getItem(LEGACY_FLOW_STORAGE_KEY);
+      if (legacyRaw) {
+        const legacyDocument = JSON.parse(legacyRaw);
+        if (legacyDocument && typeof legacyDocument === "object" && Array.isArray(legacyDocument.tables)) {
+          const migratedTab = createTab({
+            title: "Migrated",
+            sourceMode: "saved",
+            flowDocument: legacyDocument,
+          });
+          return {
+            tabs: [migratedTab],
+            activeTabId: migratedTab.id,
+            importedProjects: [],
+          };
+        }
+      }
+    } catch {
+      // Ignore migration errors and continue with default workspace.
+    }
+
+    return createDefaultWorkspace();
+  });
 
   const availableServices = useMemo(
     () => SERVICES.filter((service) => service.status === "available").length,
     [],
   );
+
+  useEffect(() => {
+    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));
+  }, [workspace]);
+
+  const addTab = (flowDocument, options = {}) => {
+    const tabId = createId("tab");
+    const nextTab = createTab({
+      id: tabId,
+      title: options.title ?? "Untitled",
+      sourceMode: options.sourceMode ?? "manual",
+      sourceProjectId: options.sourceProjectId ?? null,
+      flowDocument,
+    });
+
+    setWorkspace((snapshot) => ({
+      ...snapshot,
+      tabs: [...snapshot.tabs, nextTab],
+      activeTabId: tabId,
+    }));
+  };
+
+  const addImportedProject = ({ projectId, endpoint, flowDocument }) => {
+    const title = projectId ? `Project ${projectId}` : "Imported Project";
+    const importedProject = {
+      id: createId("project"),
+      title,
+      projectId: String(projectId ?? "unknown"),
+      endpoint: endpoint ? String(endpoint) : null,
+      flowDocument,
+      importedAt: new Date().toISOString(),
+    };
+
+    setWorkspace((snapshot) => ({
+      ...snapshot,
+      importedProjects: [importedProject, ...snapshot.importedProjects],
+    }));
+
+    return importedProject;
+  };
+
+  const updateTab = (tabId, updater) => {
+    setWorkspace((snapshot) => ({
+      ...snapshot,
+      tabs: snapshot.tabs.map((tab) => {
+        if (tab.id !== tabId) return tab;
+        if (typeof updater === "function") return updater(tab);
+        return { ...tab, ...updater };
+      }),
+    }));
+  };
+
+  const closeTab = (tabId) => {
+    setWorkspace((snapshot) => {
+      const existingIndex = snapshot.tabs.findIndex((tab) => tab.id === tabId);
+      if (existingIndex === -1) return snapshot;
+
+      const remainingTabs = snapshot.tabs.filter((tab) => tab.id !== tabId);
+      if (remainingTabs.length === 0) {
+        const fallbackTab = createTab({
+          title: "Untitled",
+          sourceMode: "manual",
+          flowDocument: createBlankFlowDocument(),
+        });
+        return {
+          ...snapshot,
+          tabs: [fallbackTab],
+          activeTabId: fallbackTab.id,
+        };
+      }
+
+      const nextActive = snapshot.activeTabId === tabId
+        ? remainingTabs[Math.max(existingIndex - 1, 0)].id
+        : snapshot.activeTabId;
+
+      return {
+        ...snapshot,
+        tabs: remainingTabs,
+        activeTabId: nextActive,
+      };
+    });
+  };
 
   if (activeView === "workflow") {
     return (
@@ -46,7 +243,35 @@ export default function App() {
             Back to Services
           </button>
         </div>
-        <WorkflowPage />
+        <WorkflowPage
+          key={workspace.activeTabId}
+          tabs={workspace.tabs}
+          activeTabId={workspace.activeTabId}
+          importedProjects={workspace.importedProjects}
+          onSetActiveTab={(tabId) =>
+            setWorkspace((snapshot) => ({
+              ...snapshot,
+              activeTabId: tabId,
+            }))
+          }
+          onCreateBlankTab={() => {
+            addTab(createBlankFlowDocument(), {
+              title: "Untitled",
+              sourceMode: "manual",
+            });
+          }}
+          onCreateTabFromImportedProject={(projectId) => {
+            const project = workspace.importedProjects.find((item) => item.id === projectId);
+            if (!project) return;
+            addTab(project.flowDocument, {
+              title: project.title,
+              sourceMode: "imported",
+              sourceProjectId: project.id,
+            });
+          }}
+          onCloseTab={closeTab}
+          onUpdateTab={updateTab}
+        />
       </div>
     );
   }
@@ -55,8 +280,17 @@ export default function App() {
     return (
       <AppwriteImportPage
         onBack={() => setActiveView("home")}
-        onOpenWorkflow={(flowDocument) => {
-          window.localStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(flowDocument));
+        onOpenWorkflow={({ flowDocument, schema }) => {
+          const importedProject = addImportedProject({
+            projectId: schema?.projectId,
+            endpoint: schema?.endpoint,
+            flowDocument,
+          });
+          addTab(flowDocument, {
+            title: importedProject.title,
+            sourceMode: "imported",
+            sourceProjectId: importedProject.id,
+          });
           setActiveView("workflow");
         }}
       />
