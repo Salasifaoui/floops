@@ -75,7 +75,11 @@ function createDefaultRuntime() {
   };
 }
 
-export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
+export default function AppwriteImportPage({
+  onBack,
+  onOpenWorkflow,
+  onDeleteImportedProjects,
+}) {
   const [projects, setProjects] = useState(loadSavedProjects);
   const [draftSections, setDraftSections] = useState([]);
   const [runtimeByProjectId, setRuntimeByProjectId] = useState({});
@@ -272,6 +276,22 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
     });
   };
 
+  const onDeleteProject = (projectId) => {
+    const projectToDelete = projects.find((project) => project.id === projectId);
+    setProjects((snapshot) => snapshot.filter((project) => project.id !== projectId));
+    setRuntimeByProjectId((snapshot) => {
+      const next = { ...snapshot };
+      delete next[projectId];
+      return next;
+    });
+    if (projectToDelete && typeof onDeleteImportedProjects === "function") {
+      onDeleteImportedProjects({
+        projectId: projectToDelete.projectId,
+        endpoint: projectToDelete.endpoint,
+      });
+    }
+  };
+
   return (
     <main className="import-shell">
       <header className="import-header">
@@ -422,9 +442,6 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
 
         {projects.map((project) => {
           const runtime = getProjectRuntime(project.id);
-          console.log("-runtime---------");
-          console.log(runtime);
-          console.log("-runtime:---------");
           const hasActiveSession = Boolean(
             runtime.connectionInfo?.hasActiveSession,
           );
@@ -467,6 +484,13 @@ export default function AppwriteImportPage({ onBack, onOpenWorkflow }) {
                   disabled={runtime.isTesting || runtime.isFetching}
                 >
                   Clean data
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDeleteProject(project.id)}
+                  disabled={runtime.isTesting || runtime.isFetching}
+                >
+                  Delete project
                 </button>
               </div>
 

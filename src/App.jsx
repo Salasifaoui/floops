@@ -189,6 +189,54 @@ export default function App() {
     return importedProject;
   };
 
+  const removeImportedProjectsByConfig = ({ projectId, endpoint }) => {
+    setWorkspace((snapshot) => {
+      const removedImportedIds = new Set(
+        snapshot.importedProjects
+          .filter((project) => {
+            if (project.projectId !== String(projectId ?? "")) return false;
+            if (endpoint) {
+              return String(project.endpoint ?? "") === String(endpoint);
+            }
+            return true;
+          })
+          .map((project) => project.id),
+      );
+
+      if (removedImportedIds.size === 0) return snapshot;
+
+      const nextImportedProjects = snapshot.importedProjects.filter(
+        (project) => !removedImportedIds.has(project.id),
+      );
+
+      const nextTabs = snapshot.tabs.filter(
+        (tab) => !tab.sourceProjectId || !removedImportedIds.has(tab.sourceProjectId),
+      );
+
+      if (nextTabs.length === 0) {
+        const fallbackTab = createTab({
+          title: "Untitled",
+          sourceMode: "manual",
+          flowDocument: createBlankFlowDocument(),
+        });
+        return {
+          ...snapshot,
+          importedProjects: nextImportedProjects,
+          tabs: [fallbackTab],
+          activeTabId: fallbackTab.id,
+        };
+      }
+
+      const activeTabExists = nextTabs.some((tab) => tab.id === snapshot.activeTabId);
+      return {
+        ...snapshot,
+        importedProjects: nextImportedProjects,
+        tabs: nextTabs,
+        activeTabId: activeTabExists ? snapshot.activeTabId : nextTabs[0].id,
+      };
+    });
+  };
+
   const updateTab = (tabId, updater) => {
     setWorkspace((snapshot) => ({
       ...snapshot,
@@ -280,6 +328,7 @@ export default function App() {
     return (
       <AppwriteImportPage
         onBack={() => setActiveView("home")}
+        onDeleteImportedProjects={removeImportedProjectsByConfig}
         onOpenWorkflow={({ flowDocument, schema }) => {
           const importedProject = addImportedProject({
             projectId: schema?.projectId,
