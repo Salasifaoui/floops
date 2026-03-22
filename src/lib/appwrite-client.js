@@ -38,6 +38,7 @@ function createProjectHeaders(connector) {
   }
   headers["Content-Type"] = "application/json";
   headers["X-Appwrite-Response-Format"] = '1.0.0';
+  headers['Access-Control-Allow-Origin'] = 'https://floop.netlify.app';
 
   return headers;
 }
