@@ -623,6 +623,71 @@
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
 }
 
+.service-hub__guide {
+  max-width: 1100px;
+  margin: 18px auto 0;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  padding: 16px;
+}
+
+.service-hub__guide-eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #6366f1;
+}
+
+.service-hub__guide h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.service-hub__guide-text {
+  margin: 10px 0 0;
+  color: #475569;
+}
+
+.service-hub__guide-steps {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+  color: #0f172a;
+}
+
+.service-hub__guide-steps li {
+  line-height: 1.45;
+}
+
+.service-hub__guide-steps li span {
+  display: inline-block;
+}
+
+.service-hub__guide-steps code {
+  border: 1px solid #dbe4ef;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.service-hub__guide-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
 .import-shell {
   min-height: 100%;
   padding: 28px;

@@ -391,6 +391,37 @@ export default function App() {
           );
         })}
       </section>
+
+      <section className="service-hub__guide" aria-label="Appwrite platform setup guide">
+        <p className="service-hub__guide-eyebrow">Before import</p>
+        <h2>Appwrite platform setup guide</h2>
+        <p className="service-hub__guide-text">
+          To use <strong>Import Data from Appwrite</strong> without connection issues, add a Web platform in
+          your Appwrite project first:
+        </p>
+        <ol className="service-hub__guide-steps">
+          <li>
+            <span>Add platform</span>
+          </li>
+          <li>
+            <span>Choose Web</span>
+          </li>
+          <li>
+            <span>Choose JavaScript</span>
+          </li>
+          <li>
+            <span>
+              Add Hostname: <code>floop.netlify.app</code>
+            </span>
+          </li>
+          <li>
+            <span>Click &quot;Create platform&quot;</span>
+          </li>
+        </ol>
+        <p className="service-hub__guide-note">
+          After creating the platform, return and open <strong>Appwrite Import</strong>.
+        </p>
+      </section>
     </main>
   );
 }
