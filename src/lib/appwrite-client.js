@@ -1,4 +1,5 @@
 import { Account, Client, TablesDB, Databases } from "appwrite";
+import cors from "cors";
 
 
 export const APPWRITE_AUTH_MODES = {
@@ -38,7 +39,11 @@ function createProjectHeaders(connector) {
   }
   headers["Content-Type"] = "application/json";
   headers["X-Appwrite-Response-Format"] = '1.0.0';
-  headers['Access-Control-Allow-Origin'] = 'https://floop.netlify.app';
+  cors({
+    origin: "https://floop.netlify.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
 
   return headers;
 }
