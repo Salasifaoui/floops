@@ -39,11 +39,7 @@ function createProjectHeaders(connector) {
   }
   headers["Content-Type"] = "application/json";
   headers["X-Appwrite-Response-Format"] = '1.0.0';
-  cors({
-    origin: "https://floop.netlify.app",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  });
+  
 
   return headers;
 }
@@ -73,6 +69,7 @@ function toApiPath(path) {
 async function appwriteRequest(connector, method, path, body = null) {
   const headers = createProjectHeaders(connector);
   const init = {
+    mode: "cors",
     method,
     headers,
   };
