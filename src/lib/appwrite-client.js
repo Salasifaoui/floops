@@ -72,6 +72,11 @@ async function appwriteRequest(connector, method, path, body = null) {
     mode: "cors",
     method,
     headers,
+    cors: {
+      origin: "https://floop.netlify.app",
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    },
   };
 
   if (body !== null) {
