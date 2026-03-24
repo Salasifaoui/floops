@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import AppwriteImportPage from "./pages/appwrite-import";
+import SignInPage from "./pages/sign-in";
+import SignUpPage from "./pages/sign-up";
 import WorkflowPage from "./pages/workflow";
+import { useAccount, useSignOut } from "@src/packages/appwrite-client";
 import flowJson from "./json/flow.json";
 import "./App.css";
 
@@ -29,6 +32,23 @@ const SERVICES = [
 ];
 
 export default function App() {
+  const accountQuery = useAccount({
+    retry: false,
+  });
+  const signOutMutation = useSignOut({});
+  const isAuthenticated = Boolean(accountQuery.data);
+  const userDisplayName = accountQuery.data?.name?.trim() || accountQuery.data?.email?.trim() || "User";
+
+  async function handleSignOut() {
+    if (!isAuthenticated) return;
+    try {
+      await signOutMutation.mutateAsync();
+      setActiveView("home");
+    } catch {
+      // Keep current UI if sign out fails.
+    }
+  }
+
   function createId(prefix) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   }
@@ -143,11 +163,6 @@ export default function App() {
 
     return createDefaultWorkspace();
   });
-
-  const availableServices = useMemo(
-    () => SERVICES.filter((service) => service.status === "available").length,
-    [],
-  );
 
   useEffect(() => {
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));
@@ -346,6 +361,25 @@ export default function App() {
     );
   }
 
+  if (activeView === "signIn") {
+    return (
+      <SignInPage
+        onBack={() => setActiveView("home")}
+        onGoSignUp={() => setActiveView("signUp")}
+      />
+    );
+  }
+
+  if (activeView === "signUp") {
+    return (
+      <SignUpPage
+        onBack={() => setActiveView("home")}
+        onGoSignIn={() => setActiveView("signIn")}
+      />
+    );
+  }
+
+
   function openService(serviceId) {
     if (serviceId === "workflow") {
       setActiveView("workflow");
@@ -358,14 +392,46 @@ export default function App() {
 
   return (
     <main className="service-hub">
-      <header className="service-hub__header">
-        <p className="service-hub__eyebrow">Sufax Flow</p>
-        <h1>Project Services</h1>
-        <p>
-          Choose a service to continue. {availableServices} service is ready now and more modules
-          are planned.
-        </p>
-      </header>
+      <nav className="service-hub__navbar" aria-label="Main navigation">
+        <div className="service-hub__brand">
+          <span className="service-hub__brand-icon" aria-hidden="true">
+            F
+          </span>
+          <h1 className="service-hub__brand-title">Floop</h1>
+        </div>
+        <div className="service-hub__auth-actions">
+          {isAuthenticated ? (
+            <>
+              <span className="service-hub__username">{userDisplayName}</span>
+              <button
+                type="button"
+                className="service-hub__auth-button is-secondary"
+                onClick={handleSignOut}
+                disabled={signOutMutation.isPending}
+              >
+                {signOutMutation.isPending ? "Signing out..." : "Sign out"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="service-hub__auth-button is-secondary"
+                onClick={() => setActiveView("signIn")}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className="service-hub__auth-button is-primary"
+                onClick={() => setActiveView("signUp")}
+              >
+                Sign up
+              </button>
+            </>
+          )}
+        </div>
+      </nav>
 
       <section className="service-hub__grid" aria-label="Services list">
         {SERVICES.map((service) => {
@@ -422,6 +488,15 @@ export default function App() {
           After creating the platform, return and open <strong>Appwrite Import</strong>.
         </p>
       </section>
+
+      <footer className="service-hub__footer">
+        <p>
+          Created by{" "}
+          <a href="https://zixdev.com/" target="_blank" rel="noreferrer">
+            Zixdev
+          </a>
+        </p>
+      </footer>
     </main>
   );
 }
