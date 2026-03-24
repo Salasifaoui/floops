@@ -71,6 +71,7 @@ async function appwriteRequest(connector, method, path, body = null) {
   const init = {
     method,
     headers,
+    mode: "cors",
   };
 
   if (body !== null) {
@@ -78,18 +79,7 @@ async function appwriteRequest(connector, method, path, body = null) {
     init.body = JSON.stringify(body);
   }
 
-  const response = await fetch(
-    `${connector.endpoint}${toApiPath(path)}`,
-    init,
-    {
-      mode: "cors",
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    },
-    
-  );
+  const response = await fetch(`${connector.endpoint}${toApiPath(path)}`, init);
 
   if (!response.ok) {
     const message = await parseErrorResponse(response);
