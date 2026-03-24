@@ -1,5 +1,5 @@
 import { Account, Client, TablesDB, Databases } from "appwrite";
-import cors from "cors";
+// import cors from "cors";
 
 
 export const APPWRITE_AUTH_MODES = {
@@ -69,14 +69,8 @@ function toApiPath(path) {
 async function appwriteRequest(connector, method, path, body = null) {
   const headers = createProjectHeaders(connector);
   const init = {
-    mode: "cors",
     method,
     headers,
-    cors: {
-      origin: "https://floop.netlify.app",
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    },
   };
 
   if (body !== null) {
@@ -87,6 +81,14 @@ async function appwriteRequest(connector, method, path, body = null) {
   const response = await fetch(
     `${connector.endpoint}${toApiPath(path)}`,
     init,
+    {
+      mode: "cors",
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+    
   );
 
   if (!response.ok) {
