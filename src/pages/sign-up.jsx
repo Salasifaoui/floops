@@ -1,6 +1,6 @@
 import "../App.css";
 import { useState } from "react";
-import { useEmailSignIn, useEmailSignUp } from "@src/packages/appwrite-client";
+import { OAuth2Provider, useEmailSignIn, useEmailSignUp, useOAuth2SignIn } from "@src/packages/appwrite-client";
 
 export default function SignUpPage({ onBack, onGoSignIn }) {
   const [form, setForm] = useState({
@@ -13,8 +13,9 @@ export default function SignUpPage({ onBack, onGoSignIn }) {
 
   const signUpMutation = useEmailSignUp({});
   const signInMutation = useEmailSignIn({});
+  const oauthMutation = useOAuth2SignIn();
 
-  const isSubmitting = signUpMutation.isPending || signInMutation.isPending;
+  const isSubmitting = signUpMutation.isPending || signInMutation.isPending || oauthMutation.isPending;
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -41,6 +42,23 @@ export default function SignUpPage({ onBack, onGoSignIn }) {
       setTimeout(() => onBack?.(), 500);
     } catch (error) {
       const fallback = "Could not create your account. Please try again.";
+      setErrorMessage(error?.message || fallback);
+    }
+  }
+
+  async function handleGoogleSignUp() {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const baseUrl = window.location.origin;
+      await oauthMutation.mutateAsync({
+        provider: OAuth2Provider.Google,
+        success: `${baseUrl}/`,
+        failure: `${baseUrl}/`,
+      });
+    } catch (error) {
+      const fallback = "Google sign-up failed. Please try again.";
       setErrorMessage(error?.message || fallback);
     }
   }
@@ -101,6 +119,19 @@ export default function SignUpPage({ onBack, onGoSignIn }) {
             {isSubmitting ? "Creating account..." : "Create account"}
           </button>
         </form>
+
+        <div className="auth-divider" role="presentation">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="auth-button auth-button--google"
+          disabled={isSubmitting}
+          onClick={handleGoogleSignUp}
+        >
+          {oauthMutation.isPending ? "Redirecting to Google..." : "Continue with Google"}
+        </button>
 
         <div className="auth-card__links">
           <button type="button" className="auth-link" onClick={onGoSignIn}>

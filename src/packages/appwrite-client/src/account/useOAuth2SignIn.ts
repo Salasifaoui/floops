@@ -13,8 +13,8 @@ type TRequest = {
 }
 
 /**
- * Create OAuth2 session for web.
- * It creates OAuth2 token URL then redirects browser to provider auth page.
+ * Start OAuth2 sign-in/sign-up on web.
+ * In the browser the Appwrite SDK redirects automatically; non-browser runtimes get a URL string.
  * @link [Appwrite Documentation](https://appwrite.io/docs/products/auth/oauth2)
  */
 function useOAuth2SignIn(props?: MutationOptions<void, unknown, TRequest, unknown>) {
@@ -27,17 +27,19 @@ function useOAuth2SignIn(props?: MutationOptions<void, unknown, TRequest, unknow
       const redirectUrl = request.success ?? `${window.location.origin}/`
       const failureUrl = request.failure ?? redirectUrl
 
-      const loginUrl = await account.createOAuth2Token({
+      const loginUrl = account.createOAuth2Session({
         provider: request.provider as unknown as OAuthProvider,
         success: redirectUrl,
         failure: failureUrl,
         scopes: request.scopes,
-      } as any)
+      })
 
-      window.location.assign(String(loginUrl))
+      if (typeof loginUrl === 'string') {
+        window.location.assign(loginUrl)
+      }
     },
     onSuccess: async (...args) => {
-      queryClient.setQueryData(['appwrite', 'account'], await account.get())
+      await queryClient.invalidateQueries({ queryKey: ['appwrite', 'account'] })
       props?.onSuccess?.(...args)
     },
   })
